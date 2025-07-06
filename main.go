@@ -5,6 +5,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing/object"
 	"log"
 	"os"
 	"rsc.io/quote"
@@ -24,19 +25,36 @@ func initialModel() model {
 
 func (m model) Init() tea.Cmd {
 	dir, err := os.Getwd()
-
 	if err != nil {
 		m.error = "something went wrong" + dir
 		log.Fatal(err)
 	}
-	_, gitErr := git.PlainOpen(dir)
 
+	repo, gitErr := git.PlainOpen(dir)
 	if gitErr != nil {
 		if errors.Is(gitErr, git.ErrRepositoryNotExists) {
 			m.error = "Git repository does not exist" + dir
 
 		}
 		log.Fatal(gitErr)
+	}
+
+	ref, refError := repo.Head()
+	if refError != nil {
+		m.error = "git cannot get head ref"
+	}
+
+	commits, commitsError := repo.Log(&git.LogOptions{From: ref.Hash()})
+	if commitsError != nil || commits == nil {
+		m.error = "git cannot get commits"
+	}
+	iteratorError := commits.ForEach(func(c *object.Commit) error {
+		log.Println(c.Message)
+		return nil
+	})
+	if iteratorError != nil {
+		m.error = iteratorError.Error()
+		return nil
 	}
 
 	return nil
