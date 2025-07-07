@@ -27,4 +27,4 @@ ln -s ~/Development/go_fun/go_fun /usr/local/bin/go_fun
 - [git-go](https://github.com/go-git/go-git) for interacting w/ git
 
 ## Next steps
-- checkout each commit, build and run, take a screenshot in headless broser, stitch together the screenshots
+- checkout each commit, build and run, take a screenshot in headless browser, stitch together the screenshots

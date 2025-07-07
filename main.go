@@ -5,6 +5,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"log"
 	"os"
@@ -48,8 +49,18 @@ func (m model) Init() tea.Cmd {
 	if commitsError != nil || commits == nil {
 		m.error = "git cannot get commits"
 	}
+
+	worktree, worktreeError := repo.Worktree()
+	if worktreeError != nil {
+		m.error = "git cannot get worktree"
+	}
+
 	iteratorError := commits.ForEach(func(c *object.Commit) error {
 		log.Println(c.Message)
+		worktree.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(c.Hash.String()),
+		})
+
 		return nil
 	})
 	if iteratorError != nil {
