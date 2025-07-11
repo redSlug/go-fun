@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/go-git/go-git/v6"
@@ -9,6 +8,7 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"log"
 	"os"
+	"os/exec"
 	"rsc.io/quote"
 )
 
@@ -24,50 +24,54 @@ func initialModel() model {
 	}
 }
 
+var TestCommitMessage string = "add link to try out the app\n"
+
 func (m model) Init() tea.Cmd {
 	dir, err := os.Getwd()
 	if err != nil {
-		m.error = "something went wrong" + dir
 		log.Fatal(err)
 	}
 
 	repo, gitErr := git.PlainOpen(dir)
 	if gitErr != nil {
-		if errors.Is(gitErr, git.ErrRepositoryNotExists) {
-			m.error = "Git repository does not exist" + dir
-
-		}
-		log.Fatal(gitErr)
+		log.Fatal("Git repository does not exist in directory")
 	}
 
 	ref, refError := repo.Head()
 	if refError != nil {
-		m.error = "git cannot get head ref"
+		log.Fatal("git cannot get head ref")
 	}
 
 	commits, commitsError := repo.Log(&git.LogOptions{From: ref.Hash()})
 	if commitsError != nil || commits == nil {
-		m.error = "git cannot get commits"
+		log.Fatal("git cannot get commits")
 	}
 
 	worktree, worktreeError := repo.Worktree()
 	if worktreeError != nil {
-		m.error = "git cannot get worktree"
+		log.Fatal("git cannot get worktree")
 	}
 
 	iteratorError := commits.ForEach(func(c *object.Commit) error {
-		log.Println(c.Message)
-		worktree.Checkout(&git.CheckoutOptions{
-			Hash: plumbing.NewHash(c.Hash.String()),
-		})
+		if c.Message == TestCommitMessage {
+			checkoutErr := worktree.Checkout(&git.CheckoutOptions{
+				Hash: plumbing.NewHash(c.Hash.String()),
+			})
+			if checkoutErr != nil {
+				log.Fatal("checkout error" + checkoutErr.Error())
+			}
+			cmd := exec.Command("npm", "run", "dev")
 
+			output, execError := cmd.CombinedOutput()
+			if execError != nil {
+				log.Fatal("npm run error" + execError.Error() + "\n" + string(output))
+			}
+		}
 		return nil
 	})
 	if iteratorError != nil {
-		m.error = iteratorError.Error()
-		return nil
+		log.Fatal("iterator error" + iteratorError.Error())
 	}
-
 	return nil
 }
 
