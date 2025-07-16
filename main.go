@@ -8,12 +8,9 @@ import (
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
-	"path/filepath"
 	"rsc.io/quote"
 	"time"
 )
@@ -23,6 +20,8 @@ type model struct {
 	error   string
 }
 
+var TestURL string = "http://localhost:5173/"
+
 func initialModel() model {
 	return model{
 		pressed: "",
@@ -30,36 +29,13 @@ func initialModel() model {
 	}
 }
 
-var TestCommitMessage string = "add link to try out the app\n"
-var TestURL string = "http://localhost:5173/japanese-learning-helper/"
-var TestFile = "TESTFile.png"
-
-func writeFile(content []byte) {
-	currentUser, err := user.Current()
-	if err != nil {
-		log.Fatal("Error getting current user: " + err.Error())
-	}
-	homeDir := currentUser.HomeDir
-
-	relativePath := "temp/" + TestFile
-
-	fullPath := filepath.Join(homeDir, relativePath)
-
-	dir := filepath.Dir(fullPath)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.MkdirAll(dir, 0755)
-		if err != nil {
-			log.Fatal("Error creating directory", err.Error())
-		}
-	}
-
-	err = ioutil.WriteFile(fullPath, content, 0644)
-	if err != nil {
-		log.Fatal("Error writing to file" + err.Error())
-	}
+func checkoutMain(worktree git.Worktree) {
+	worktree.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.Main,
+	})
 }
 
-func processCommits() tea.Cmd {
+func processCommits(m model) tea.Cmd {
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -67,7 +43,7 @@ func processCommits() tea.Cmd {
 
 	repo, gitErr := git.PlainOpen(dir)
 	if gitErr != nil {
-		log.Fatal("Git repository does not exist in directory")
+		log.Fatal("git repository does not exist in directory")
 	}
 
 	ref, refError := repo.Head()
@@ -85,52 +61,67 @@ func processCommits() tea.Cmd {
 		log.Fatal("git cannot get worktree")
 	}
 
+	parentServerCtx, cancelParentServer := context.WithCancel(context.Background())
+	defer cancelParentServer()
+
+	cmd := exec.CommandContext(parentServerCtx, "npm", "run", "dev")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Start()
+	if err != nil {
+		log.Println("could not start npm")
+		return nil
+	}
+	time.Sleep(5 * time.Second)
+
 	iteratorError := commits.ForEach(func(c *object.Commit) error {
-		if c.Message == TestCommitMessage {
-			checkoutErr := worktree.Checkout(&git.CheckoutOptions{
-				Hash: plumbing.NewHash(c.Hash.String()),
-			})
-			if checkoutErr != nil {
-				log.Fatal("checkout error" + checkoutErr.Error())
-				return nil
-			}
-			cmd := exec.Command("npm", "run", "dev")
+		worktree.Checkout(&git.CheckoutOptions{
+			Hash: plumbing.NewHash(c.Hash.String()),
+		})
 
-			output, execError := cmd.CombinedOutput()
-			if execError != nil {
-				log.Fatal("npm run error" + execError.Error() + "\n" + string(output))
-				return nil
-			}
+		opts := append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.Flag("ignore-certificate-errors", "1"),
+			chromedp.Flag("allow-insecure-localhost", "1"),
+			chromedp.Flag("disable-web-security", "1"),
+		)
 
-			ctx, cancel := chromedp.NewContext(context.Background(), chromedp.WithDebugf(log.Printf))
-			defer cancel()
+		ctx, cancel := chromedp.NewExecAllocator(parentServerCtx, opts...)
+		defer cancel()
 
-			ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+		ctx, cancel = chromedp.NewContext(ctx)
+		defer cancel()
 
-			var buf []byte
+		var buf []byte
+		captureError := chromedp.Run(ctx,
+			chromedp.Navigate(TestURL),
+			chromedp.Sleep(1*time.Second),
+			chromedp.FullScreenshot(&buf, 80),
+		)
 
-			captureError := chromedp.Run(ctx,
-				chromedp.Navigate(TestURL),
-				chromedp.CaptureScreenshot(&buf),
-			)
-
-			if captureError != nil {
-				log.Fatal("error capturing screenshot" + captureError.Error())
-			}
-
-			writeFile(buf)
+		if captureError != nil {
+			checkoutMain(*worktree)
+			log.Fatal("error capturing screenshot" + captureError.Error())
 		}
+
+		if err := os.WriteFile("SCREENSHOT_"+c.Hash.String()+".png", buf, 0644); err != nil {
+			log.Fatal("error writing file", err)
+		}
+
+		cancel()
 		return nil
 	})
 	if iteratorError != nil {
 		log.Fatal("iterator error" + iteratorError.Error())
 	}
+
+	cancelParentServer()
+	checkoutMain(*worktree)
+	m.pressed = "PROCESSED COMMITS"
 	return nil
 }
 
 func (m model) Init() tea.Cmd {
-	m.pressed = "PRESS A KEY"
+	processCommits(m)
 	return nil
 }
 
@@ -139,10 +130,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-
-		case "r":
-			processCommits()
-			return m, nil
 
 		case "q":
 			return m, tea.Quit

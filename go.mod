@@ -4,6 +4,7 @@ go 1.24.4
 
 require (
 	github.com/charmbracelet/bubbletea v1.3.5
+	github.com/chromedp/chromedp v0.13.7
 	github.com/go-git/go-git/v6 v6.0.0-20250701074610-5d6af409877b
 	rsc.io/quote v1.5.2
 )
@@ -18,8 +19,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
-	github.com/chromedp/cdproto v0.0.0-20250706212322-41fb261d0659 // indirect
-	github.com/chromedp/chromedp v0.13.7 // indirect
+	github.com/chromedp/cdproto v0.0.0-20250715215929-4738bcb231c7 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
@@ -27,7 +27,7 @@ require (
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
 	github.com/go-git/go-billy/v6 v6.0.0-20250627091229-31e2a16eef30 // indirect
-	github.com/go-json-experiment/json v0.0.0-20250709061156-d2cd4771eb1b // indirect
+	github.com/go-json-experiment/json v0.0.0-20250714165856-be8212f5270d // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
