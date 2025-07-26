@@ -2,9 +2,10 @@
 Command line tool to render the visual history of a node project from all commits over time
 
 *Requirements*
-- must be run in a github repo
+- run in a Github repo with less than 100 commits
 - `npm i` has already run and all required packages are included in the first commit
 - `npm run dev` should bring up frontend on `http://localhost:5173/` with hot reloading enabled
+- must have `ffmpeg` installed
 
 ## Develop
 ```bash
@@ -38,6 +39,8 @@ go_fun
 - consider shutting down and re-running the `npm run dev` command for each commit 
 - obviate the need for `kill $(lsof -ti :5174)`
 - fix the spacing of the output + hide red herring error messages
+- get the count of commits and increment num for the SCRRENSHOT file name so they are not reversed
+- create a video gif
 
 ## Troubleshooting
 - `ERROR: could not unmarshal event: json: cannot unmarshal JSON string into Go network.IPAddressSpace within "/resourceIPAddressSpace": unknown IPAddressSpace value: Local` is a red herring
