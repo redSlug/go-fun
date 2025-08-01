@@ -22,7 +22,7 @@ type model struct {
 	error   string
 }
 
-const TestURL string = "http://localhost:5173/"
+const TestURL string = "http://192.168.1.56:3000/"
 const ScreenshotNumDigits = 3
 const FramesPerSecond = 2
 
@@ -33,7 +33,7 @@ func initialModel() model {
 	}
 }
 
-func createUniqueFiles(prefix string, newPrefix string) {
+func createUniqueFilesFromScreenshots(prefix string, newPrefix string) {
 	hasher := sha256.New()
 	fileHashes := map[string]bool{}
 	uniqueFilesPaths := []string{}
@@ -59,12 +59,12 @@ func createUniqueFiles(prefix string, newPrefix string) {
 }
 
 func createVideoFromUniqueFiles() {
-	inputFilePattern := "UNIQUE_SCREENSHOT_%03d.jpg"
+	inputFilePattern := "UNIQUE_SCREENSHOT_[0-9][0-9][0-9].jpg"
 	outputFile := "UNIQUE_RENDER_HISTORY.mov"
 
 	cmd := exec.Command(
 		"ffmpeg",
-		"-framerate", "2",
+		"-framerate", "1",
 		"-pix_fmt", "rgb24",
 		"-i", inputFilePattern,
 		outputFile,
@@ -115,7 +115,8 @@ func createScreenshotsFromCommits(m model, imageQuality int) tea.Cmd {
 	parentServerCtx, cancelParentServer := context.WithCancel(context.Background())
 	defer cancelParentServer()
 
-	cmd := exec.CommandContext(parentServerCtx, "npm", "run", "dev")
+	cmd := exec.Command("npm", "run", "start")
+	//cmd := exec.CommandContext(parentServerCtx, "npm", "run", "dev")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Start()
@@ -150,7 +151,7 @@ func createScreenshotsFromCommits(m model, imageQuality int) tea.Cmd {
 		var buf []byte
 		captureError := chromedp.Run(ctx,
 			chromedp.Navigate(TestURL),
-			chromedp.Sleep(100*time.Millisecond),
+			chromedp.Sleep(500*time.Millisecond),
 			chromedp.EmulateViewport(1000, 500),
 			chromedp.FullScreenshot(&buf, imageQuality),
 		)
@@ -180,9 +181,6 @@ func createScreenshotsFromCommits(m model, imageQuality int) tea.Cmd {
 }
 
 func (m model) Init() tea.Cmd {
-	createScreenshotsFromCommits(m, 80)
-	createUniqueFiles("SCREENSHOT_", "UNIQUE_SCREENSHOT")
-	createVideoFromUniqueFiles()
 	return nil
 }
 
@@ -193,7 +191,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "s":
 			createScreenshotsFromCommits(m, 80)
 		case "u":
-			createUniqueFiles("SCREENSHOT_", "UNIQUE_SCREENSHOT")
+			createUniqueFilesFromScreenshots("SCREENSHOT_", "UNIQUE_SCREENSHOT")
 		case "v":
 			createVideoFromUniqueFiles()
 		case "q":

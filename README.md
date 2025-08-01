@@ -1,5 +1,7 @@
 # go_fun
-Command line tool to render the visual history of a node project from all commits over time
+Command line tool to render the visual history of a node project from all commits over time. See this example:
+
+[![Watch an example](http://img.youtube.com/vi/5PCvlFum7WE/hqdefault.jpg)](https://youtu.be/5PCvlFum7WE)
 
 *Requirements*
 - run in a Github repo with less than 100 commits
